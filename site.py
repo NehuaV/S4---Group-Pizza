@@ -3,6 +3,7 @@ from datetime import timedelta
 import pandas
 import pandas as pd
 import numpy as np
+import plotly.express as px
 import streamlit as st
 import keras
 import sklearn
@@ -127,14 +128,21 @@ def do_device(data: pandas.DataFrame, model: Sequential, did: str):
 
     df_pred = predict_df(df_selected, model, p)
 
-    fig: plt.Figure
-    fig, ax = plt.subplots()
+    # fig: plt.Figure
+    # fig, ax = plt.subplots()
 
-    df_selected.plot(kind='line', y="Temp", c="purple", ax=ax)
-    df_excluded.plot(kind='line', y="Temp", c="blue", ax=ax)
-    df_pred.plot(kind='line', y="Forecast", c="red", ax=ax)
+    df_combined = pandas.concat([df_selected[df_selected.index >= str(d - timedelta(weeks=1))], df_pred])
+    print(df_combined.info())
 
-    st.pyplot(fig)
+    # df_selected.plot(kind='line', y="Temp", c="purple", ax=ax)
+    # df_excluded.plot(kind='line', y="Temp", c="blue", ax=ax)
+    # df_pred.plot(kind='line', y="Forecast", c="red", ax=ax)
+
+    fig = px.line(df_combined)
+
+    st.plotly_chart(fig)
+
+    # st.line_chart(df_combined)
 
 
 d, m = load(device_id)
