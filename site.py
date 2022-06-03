@@ -156,6 +156,7 @@ def do_device(data: pandas.DataFrame, model: Sequential, did: str):
     fig = px.line(title=f"Device {device_id} forecast")
     fig.add_trace(go.Scatter(x=df_combined.index, y=df_combined.Temp, name="Data"))
     fig.add_trace(go.Scatter(x=df_combined.index, y=df_combined.Forecast, name="Forecast"))
+    fig.update_layout(hovermode="x")
 
     alarm_triggered = False
 
@@ -185,8 +186,6 @@ def do_device(data: pandas.DataFrame, model: Sequential, did: str):
         if lower is not None:
             fig.add_hline(lower, line={'color': "blue"})
             alarm_triggered |= len(df_pred[df_pred.Forecast < lower]) > 0
-
-    fig.update_layout(hovermode="x")
 
     st.plotly_chart(fig)
 
