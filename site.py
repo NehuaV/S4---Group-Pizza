@@ -4,6 +4,7 @@ import pandas
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 import keras
 import sklearn
@@ -16,6 +17,22 @@ device_select: str = st.sidebar.selectbox(
     "Which Device?",
     [f"Device {d}" for d in ("D", "I", "K", "S")]
 )
+
+limits = {
+    "K": {
+        "upper": -24,
+        "lower": None,
+    },
+    "S": {
+        "upper": 4,
+        "lower": 0,
+    },
+    "I": {
+        "upper": 25,
+        "lower": 8,
+    },
+    "D": None,
+}
 
 device_id = device_select.removeprefix("Device ")
 
@@ -114,33 +131,70 @@ def do_device(data: pandas.DataFrame, model: Sequential, did: str):
 
     st.title(f"Device {did}: Predictions")
 
-    st.write(data)
+    end_date = st.date_input("Latest date", value=max_date, min_value=min_date, max_value=max_date)
+    periods = int(st.number_input("Periods", value=50, min_value=50))
+    with_alarm = st.checkbox("Enable alarm")
 
-    d = st.date_input("Latest date", value=max_date, min_value=min_date, max_value=max_date)
+    print(end_date)
 
-    p = st.number_input("Periods", value=50, min_value=50)
-
-    print(d)
-
-    df_selected: pandas.DataFrame = data[data.index <= str(d)]
+    df_selected: pandas.DataFrame = data[data.index <= str(end_date)]
     print(df_selected.info())
-    df_excluded: pandas.DataFrame = data[data.index > str(d)]
+    df_excluded: pandas.DataFrame = data[data.index > str(end_date)]
 
-    df_pred = predict_df(df_selected, model, p)
+    df_pred = predict_df(df_selected, model, periods)
 
     # fig: plt.Figure
     # fig, ax = plt.subplots()
 
-    df_combined = pandas.concat([df_selected[df_selected.index >= str(d - timedelta(weeks=1))], df_pred])
+    df_combined = pandas.concat([df_selected[df_selected.index >= str(end_date - timedelta(weeks=1))], df_pred])
     print(df_combined.info())
 
     # df_selected.plot(kind='line', y="Temp", c="purple", ax=ax)
     # df_excluded.plot(kind='line', y="Temp", c="blue", ax=ax)
     # df_pred.plot(kind='line', y="Forecast", c="red", ax=ax)
 
-    fig = px.line(df_combined)
+    fig = px.line(title=f"Device {device_id} forecast")
+    fig.add_trace(go.Scatter(x=df_combined.index, y=df_combined.Temp, name="Data"))
+    fig.add_trace(go.Scatter(x=df_combined.index, y=df_combined.Forecast, name="Forecast"))
+
+    alarm_triggered = False
+
+    if with_alarm:
+        limit = limits[device_id]
+
+        upper = None
+        lower = None
+
+        if limit is None:
+            st.text(f"Note: Device {device_id} does not have limits")
+        else:
+            if limit["upper"] is None:
+                st.text(f"Note: Device {device_id} does not not have an upper limit")
+            else:
+                upper = limit["upper"]
+
+            if limit["lower"] is None:
+                st.text(f"Note: Device {device_id} does not not have an lower limit")
+            else:
+                lower = limit["lower"]
+
+        if upper is not None:
+            fig.add_hline(upper, line={'color': "red"})
+            alarm_triggered |= len(df_pred[df_pred.Forecast > upper]) > 0
+
+        if lower is not None:
+            fig.add_hline(lower, line={'color': "blue"})
+            alarm_triggered |= len(df_pred[df_pred.Forecast < lower]) > 0
+
+    fig.update_layout(hovermode="x")
 
     st.plotly_chart(fig)
+
+    if with_alarm:
+        if alarm_triggered:
+            st.warning("Alarm has been triggered")
+        else:
+            st.info("Alarm has not been triggered")
 
     # st.line_chart(df_combined)
 
