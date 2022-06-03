@@ -20,7 +20,7 @@ device_select: str = st.sidebar.selectbox(
 
 limits = {
     "K": {
-        "upper": -24,
+        "upper": -20,
         "lower": None,
     },
     "S": {
