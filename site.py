@@ -15,7 +15,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 device_select: str = st.sidebar.selectbox(
     "Which Device?",
-    [f"Device {d}" for d in ("D", "I", "K", "S")]
+    [f"Device {d}" for d in ("K", "S", "I", "D")]
 )
 
 limits = {
@@ -73,12 +73,13 @@ def predict_df(df: pandas.DataFrame, model: Sequential, periods: int) -> pandas.
     df_copy_scaled = df_copy
     df_copy_scaled["Temp"] = scaler.transform(df_copy)
 
-    ## Look back (How many days in the past we check for prediction)
-    previous_days = 20
-    ## Which day we predict (1=Next Day)
-    after_days = 1
+    ## Look back (How many minutes in the past we check for prediction)
+    previous_minutes = 200
+    ## Which minute we predict (1=Next Minute)
+    after_minute = 1
 
-    X = create_delayed_columns(df_copy_scaled, times=range(-previous_days + 1, 1)).iloc[previous_days:-after_days]
+    X = create_delayed_columns(df_copy_scaled, times=range(-previous_minutes + 1, 1)).iloc[
+        previous_minutes:-after_minute]
     X_train = X.loc[:"2020-12-28"]
     X_train_3D = prepare_data(X_train)
     steps_back = len(X_train_3D[1])
@@ -119,6 +120,17 @@ def predict_df(df: pandas.DataFrame, model: Sequential, periods: int) -> pandas.
     # st.write(model.plot(forecast))
 
 
+def plot_zoom(end_date: str, zoom_select: str, df_selected: pandas.DataFrame, df_pred: pandas.DataFrame):
+    if (zoom_select == "Daily"):
+        return pandas.concat([df_selected[df_selected.index >= str(end_date - timedelta(days=1))], df_pred])
+    elif (zoom_select == "Weekly"):
+        return pandas.concat([df_selected[df_selected.index >= str(end_date - timedelta(weeks=1))], df_pred])
+    elif (zoom_select == "Monthly"):
+        return pandas.concat([df_selected[df_selected.index >= str(end_date - timedelta(weeks=4))], df_pred])
+    else:
+        return None
+
+
 def do_device(data: pandas.DataFrame, model: Sequential, did: str):
     data["EventDt"] = pd.to_datetime(data["EventDt"])
     data = data.set_index(data["EventDt"])
@@ -127,12 +139,14 @@ def do_device(data: pandas.DataFrame, model: Sequential, did: str):
     # data["ds"] = data.index
 
     min_date = data.index.min()
+    print(min_date)
     max_date = data.index.max()
+    print(max_date)
 
     st.title(f"Device {did}: Predictions")
 
     end_date = st.date_input("Latest date", value=max_date, min_value=min_date, max_value=max_date)
-    periods = int(st.number_input("Periods", value=50, min_value=50))
+    periods = int(st.number_input("Periods", value=50, min_value=10))
     with_alarm = st.checkbox("Enable alarm")
 
     print(end_date)
@@ -143,10 +157,18 @@ def do_device(data: pandas.DataFrame, model: Sequential, did: str):
 
     df_pred = predict_df(df_selected, model, periods)
 
+    # print("Pred" + df_pred)
+
     # fig: plt.Figure
     # fig, ax = plt.subplots()
 
-    df_combined = pandas.concat([df_selected[df_selected.index >= str(end_date - timedelta(weeks=1))], df_pred])
+    zoom_select: str = st.selectbox(
+        "Plot Type",
+        [ "Daily", "Weekly", "Monthly"]
+        , index=0
+    )
+
+    df_combined = plot_zoom(end_date, zoom_select, df_selected, df_pred)
     print(df_combined.info())
 
     # df_selected.plot(kind='line', y="Temp", c="purple", ax=ax)
