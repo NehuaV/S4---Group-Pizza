@@ -9,3 +9,6 @@ tensorflow
 keras
 streamlit
 plotly
+calmap
+pmdarima
+spectralcluster
