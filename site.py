@@ -10,6 +10,8 @@ import keras
 import sklearn
 from keras.models import Sequential
 
+import smtplib
+
 # from neuralprophet import NeuralProphet
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
@@ -281,6 +283,21 @@ def do_device(data: pandas.DataFrame, model: Sequential, did: str):
 
     if with_alarm:
         if alarm_triggered:
+            email = 'hristo.hristov2021@gmail.com'
+            passord = 'dlvdefsmgvzhxrqs'
+            with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+                smtp.ehlo()
+                smtp.starttls()
+                smtp.ehlo()
+
+                smtp.login(email, passord)
+
+                subject = 'maika ti'
+                body = f'Pedal device {device_id} sha grymne'
+
+                msg = f'Subject:{subject}\n\n{body}'
+
+                smtp.sendmail(email, 'hristo2001@gmail.com', msg)
             st.warning("Alarm has been triggered")
         else:
             st.info("Alarm has not been triggered")
