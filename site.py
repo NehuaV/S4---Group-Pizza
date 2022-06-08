@@ -198,20 +198,23 @@ def do_device(data: pandas.DataFrame, model: Sequential, did: str):
     st.title(f"Device {did}: Predictions")
 
     start_date, end_date = st.slider(
-        "Prediction Date Range", min_date, max_date, (min_date, max_date)
+        "Prediction Date Range",
+        min_date,
+        max_date,
+        (min_date, max_date),
+        format="DD/MM/YYYY - hh:mm",
     )
 
     until: datetime = st.slider(
         "Forecast Until",
         end_date + FORECAST_STEP,
-        end_date + timedelta(weeks=2),
+        end_date + timedelta(days=4),
         end_date + (FORECAST_STEP * 100),
         timedelta(minutes=5),
+        format="DD/MM/YYYY - hh:mm",
     )
     with_alarm = st.checkbox("Enable alarm")
-    zoom_select: str = st.selectbox(
-        "Plot Zoom History", [DAY, WEEK, MONTH], index=0
-    )
+    zoom_select: str = st.selectbox("Plot Zoom History", [DAY, WEEK, MONTH], index=0)
 
     periods = int((until - end_date) / timedelta(minutes=5))
 
